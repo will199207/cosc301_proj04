@@ -1,0 +1,167 @@
+/*
+ * 
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <assert.h>
+#include <strings.h>
+#include <string.h>
+#include <ucontext.h>
+#include "threadsalive.h"
+int stack, list_len, list_loc;
+ucontext_t * m, lnk;
+struct node * head;
+/* ***************************** 
+     linked list functions
+   ***************************** */
+void append(ucontext_t * context){
+	/*
+	Function accesses the shared "head" of the linked list, 
+	and appends a new node with the context passed into it 
+	to the end of the list
+	*/
+	if (head==NULL){
+		head = malloc(sizeof(struct node));
+		head->thread = *context;
+		head->pos = list_loc++;
+		head->next= NULL;
+	}else{
+		struct node *temp = head;
+		while(temp->next!=NULL){
+			temp = temp->next;}
+		temp->next = malloc(sizeof(struct node)); 
+		temp = temp->next;
+		temp->pos = list_loc++;
+		temp->thread = *context;
+	}
+list_len++;
+//printf("Appended Node #: %d\n", list_loc);
+}
+
+ucontext_t* pop(int del){
+	/*
+	This function accesses the shared variable "head" and pops it from the list. 
+	It sets head->next as head and frees the malloced memory that head had. It then returns
+	a malloced ucontext_t that was the context in head. If queue is empty, a null pointer is returned.
+	if del==1, this thread needs to be cleared. 
+	*/
+	if (head == NULL){
+		return NULL;
+	}else{
+		ucontext_t *rv = malloc(sizeof(ucontext_t));
+		struct node *temp = head;		
+		*rv = head->thread;
+		//printf("Popping stack item #%d\n", head->pos);
+		head = head->next;
+		//free(temp);
+		list_len--;
+		return rv;
+	}
+}
+	
+	
+		
+
+
+
+
+/* ***************************** 
+     stage 1 library functions
+   ***************************** */
+
+
+void ta_libinit(void) {
+	m = malloc(sizeof(ucontext_t));
+	stack = 1024*128;
+	list_loc=0;
+	list_len=0;
+    return;
+}
+
+void ta_create(void (*func)(void *), void *arg) {
+	ucontext_t new; 
+	getcontext(&new);
+	//new stack for the child made from the heap
+	new.uc_stack.ss_sp = malloc(stack);
+	new.uc_stack.ss_size = stack;
+	new.uc_stack.ss_flags = 0;
+
+	new.uc_link = m; 
+
+	//write the stack/funct and args to the new thread
+	makecontext(&new, (void (*)(void))func, 1, arg);
+	//put the context on my new queue of nodes
+	append(&new);
+    return;
+}
+
+void ta_yield(void) {
+	ucontext_t *current = malloc(sizeof(ucontext_t)); 
+	getcontext(current);
+	append(current); 
+	swapcontext(current, m); 
+}
+
+int ta_waitall(void) {
+	/*
+	This function pops a context from the stack, swaps it with the main (essentally running it)
+	and repeats untill there arent any more contexts to be run
+	//IF A THREAD ENDS, NEED TO CLEAR ITS STACK/HEAP!?!
+	*/
+	ucontext_t *new;
+	do{
+		new = pop(0);
+		swapcontext(m, new);
+		getcontext(m);
+	}while(new!=NULL);
+    return list_len; 
+}
+
+
+/* ***************************** 
+     stage 2 library functions
+   ***************************** */
+
+void ta_sem_init(tasem_t *sem, int value) {
+}
+
+void ta_sem_destroy(tasem_t *sem) {
+}
+
+void ta_sem_post(tasem_t *sem) {
+}
+
+void ta_sem_wait(tasem_t *sem) {
+}
+
+void ta_lock_init(talock_t *mutex) {
+}
+
+void ta_lock_destroy(talock_t *mutex) {
+}
+
+void ta_lock(talock_t *mutex) {
+}
+
+void ta_unlock(talock_t *mutex) {
+}
+
+
+/* ***************************** 
+     stage 3 library functions
+   ***************************** */
+
+void ta_cond_init(tacond_t *cond) {
+}
+
+void ta_cond_destroy(tacond_t *cond) {
+}
+
+void ta_wait(talock_t *mutex, tacond_t *cond) {
+}
+
+void ta_signal(tacond_t *cond) {
+}
+

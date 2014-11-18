@@ -7,7 +7,7 @@
 #include "threadsalive.h"
 
 #define DATALEN 100
-#define DURATION 3
+#define DURATION 2
 
 tasem_t readersem;
 tasem_t writersem;
@@ -43,7 +43,7 @@ void reader(void *arg)
         ta_unlock(&rmutex);
         val = data[loc];
         ta_sem_post(&writersem);
-        fprintf(stderr, "reader %d read location %d\n", tid, loc);
+       	fprintf(stderr, "reader %d read location %d\n", tid, loc);
 
         if (random() % 2 == 0)
             ta_yield();
@@ -88,12 +88,11 @@ int main(int argc, char **argv)
     datalen = DATALEN;
 
     ta_sem_init(&readersem, 0);
-    ta_sem_init(&writersem, DATALEN);
+    ta_sem_init(&writersem, DATALEN);	
     ta_lock_init(&rmutex);
     ta_lock_init(&wmutex);
 
     ta_create(killerthr, (void *)i);
-
     for (i = 0; i < nrw; i++) {
         ta_create(reader, (void *)i);
         ta_create(writer, (void *)i);
@@ -101,13 +100,11 @@ int main(int argc, char **argv)
 
     int rv = ta_waitall();
     assert(rv == 0);
-
     ta_sem_destroy(&readersem);
     ta_sem_destroy(&writersem);
     ta_lock_destroy(&rmutex);
     ta_lock_destroy(&wmutex);
 
-    free(data);
-
+	free(data); 
     return 0;
 }

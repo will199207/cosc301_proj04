@@ -4,20 +4,31 @@
 
 #ifndef __THREADSALIVE_H__
 #define __THREADSALIVE_H__
-
+#include <ucontext.h>
 /* ***************************
         type definitions
    *************************** */
-
+struct node {
+	ucontext_t thread;
+	int pos; 
+	struct node *next;
+};
 typedef struct {
+	struct node **queue;
+	int *lock; 
 
 } tasem_t;
 
 typedef struct {
+	tasem_t * sem; 
+	int* lock;
 
 } talock_t;
 
 typedef struct {
+	tasem_t *sem; 
+
+	int*condition; //0 or 1 condition that will be waited on
 
 } tacond_t;
 
@@ -25,7 +36,9 @@ typedef struct {
 /* ***************************
        stage 1 functions
    *************************** */
-
+ucontext_t* pop(struct node**);
+void del_lst(struct node **);
+void append(ucontext_t *, struct node**);
 void ta_libinit(void);
 void ta_create(void (*)(void *), void *);
 void ta_yield(void);

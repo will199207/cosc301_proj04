@@ -64,10 +64,8 @@ int main(int argc, char **argv)
 {
     printf("Tester for stage 3.\n");
     ta_libinit();
-
     ta_lock_init(&mutex);
     ta_cond_init(&condv);
-
     ta_create(thread1, NULL);
     ta_create(thread2, NULL);
 
